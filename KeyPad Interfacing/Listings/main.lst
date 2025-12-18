@@ -1,0 +1,90 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              12/18/2025 11:08:05 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include<reg51.h>
+   2          
+   3          sbit r1 = P1^3;
+   4          sbit r2 = P1 ^ 4;
+   5          sbit r3 = P1 ^ 5;
+   6          sbit r4 = P1 ^ 6;
+   7          sbit c1 = P1 ^ 0;
+   8          sbit c2 = P1 ^ 1;
+   9          sbit c3 = P1 ^ 2;
+  10          int digits[] = {
+  11            0x3F, // 0
+  12            0x06, // 1
+  13            0b011111111, // 2
+*** ERROR C251 IN LINE 13 OF main.c: illegal octal digit
+  14            0x4F, // 3
+  15            0x66, // 4
+  16            0x6D, // 5
+  17            0x7D, // 6
+  18            0x07, // 7
+  19            0x7F, // 8
+  20            0x6F, // 9
+  21            0x77, // A
+  22            0x7C, // b (lowercase)
+  23            0x3D, // C
+  24            0x5E, // d (lowercase)
+  25            0x79, // E
+  26            0x71  // F
+  27          };
+  28          
+  29          void show(int digit){
+  30   1        P2 = digits[digit];
+  31   1      }
+  32          
+  33          void main(void){
+  34   1        while(1){
+  35   2          c1 = c2 = c3 = 1;
+  36   2          r1 = r2 = r3 = r4 = 0;
+  37   2          if(c1 == 0){
+  38   3            r1 = r2 = r3 = r4 = 1;
+  39   3            c1 = c2 =c3 = 0;
+  40   3            if(r1 == 0){
+  41   4              show(1);
+  42   4            }else if(r2 == 0){
+  43   4              show(4);
+  44   4            }else if(r3 == 0){
+  45   4              show(7);
+  46   4            }else if(r4 == 0){
+  47   4              
+  48   4            }
+  49   3          }else if(c2 == 0){
+  50   3            r1 = r2 = r3 = r4 = 1;
+  51   3            c1 = c2 =c3 = 0;
+  52   3            if(r1 == 0){
+  53   4              show(2);
+C51 COMPILER V9.60.7.0   MAIN                                                              12/18/2025 11:08:05 PAGE 2   
+
+  54   4            }else if(r2 == 0){
+  55   4              show(5);
+  56   4            }else if(r3 == 0){
+  57   4              show(8);
+  58   4            }else if(r4 == 0){
+  59   4              show(0);
+  60   4            }
+  61   3          }else if(c3 == 0){
+  62   3            r1 = r2 = r3 = r4 = 1;
+  63   3            c1 = c2 =c3 = 0;
+  64   3            if(r1 == 0){
+  65   4              show(3);
+  66   4            }else if(r2 == 0){
+  67   4              show(6);
+  68   4            }else if(r3 == 0){
+  69   4              show(9);
+  70   4            }else if(r4 == 0){
+  71   4              
+  72   4            }
+  73   3          }
+  74   2        }
+  75   1      }
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  1 ERROR(S)

@@ -1,0 +1,98 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              12/18/2025 10:53:21 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <reg51.h>
+   2          
+   3          #define lcd_data P3
+   4          
+   5          sbit rs=P2^0;
+   6          sbit rw=P2^1;
+   7          sbit en=P2^2;
+   8          
+   9          void lcd_init();
+  10          void cmd(unsigned char a);
+  11          void dat(unsigned char b);
+  12          void show(unsigned char *s);
+  13          void lcd_delay();
+  14          
+  15          void lcd_init()
+  16          {
+  17   1          cmd(0x38);
+  18   1          cmd(0x0e);
+  19   1          cmd(0x01);
+  20   1          cmd(0x06);
+  21   1          cmd(0x0c);
+  22   1          cmd(0x80);
+  23   1      }
+  24          
+  25          void cmd(unsigned char a)
+  26          {
+  27   1          lcd_data=a;
+  28   1          rs=0;
+  29   1          rw=0;
+  30   1          en=1;
+  31   1          lcd_delay();
+  32   1          en=0;
+  33   1      }
+  34          
+  35          void dat(unsigned char b)
+  36          {
+  37   1          lcd_data=b;
+  38   1          rs=1;
+  39   1          rw=0;
+  40   1          en=1;
+  41   1          lcd_delay();
+  42   1          en=0;
+  43   1      }
+  44          
+  45          void show(unsigned char *s)
+  46          {
+  47   1          while(*s) {
+  48   2              dat(*s++);
+  49   2          }
+  50   1      }
+  51          
+  52          void lcd_delay()
+  53          {
+  54   1          unsigned int lcd_delay;
+C51 COMPILER V9.60.7.0   MAIN                                                              12/18/2025 10:53:21 PAGE 2   
+
+  55   1          for(lcd_delay=0;lcd_delay<=6000;lcd_delay++);
+  56   1      }
+  57          
+  58          int main()
+  59          {
+  60   1          unsigned int j;
+  61   1          lcd_init();
+  62   1          while(1) {
+  63   2              cmd(0x80);
+  64   2              show("   Welcome   ");
+  65   2              cmd(0xc0);
+  66   2              show(" Devesh Sharma");
+  67   2      
+  68   2              for(j=0; j<30000; j++);
+  69   2              cmd(0x01);
+  70   2              for(j=0; j<30000; j++);
+  71   2          }
+  72   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    179    ----
+   CONSTANT SIZE    =     29    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       3
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
