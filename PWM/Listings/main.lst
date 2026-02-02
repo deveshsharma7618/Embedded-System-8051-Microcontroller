@@ -1,0 +1,54 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              12/27/2025 19:40:42 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <reg51.h>
+   2          
+   3          sbit pin = P2^0;
+   4          
+   5          void pwm(int n);
+   6          void delay();
+   7          
+   8          void main(void){
+   9   1        unsigned int i;
+  10   1        while(1){
+  11   2          delay();
+  12   2      
+  13   2          for(i = 1; i <= 255; i++){
+  14   3            pwm(i);
+  15   3          }
+  16   2        }
+  17   1      }
+  18          
+  19          void pwm(int n){
+  20   1        unsigned int i;
+  21   1        for(i = 1; i <= n*100; i++)
+  22   1          pin = 1;
+  23   1        for(; i <= 25500; i++)
+  24   1          pin = 0;
+  25   1      }
+  26          
+  27          void delay(){
+  28   1        unsigned int i;
+  29   1        for(i = 1; i <= 65000; i++);
+  30   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    110    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

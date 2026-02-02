@@ -1,0 +1,128 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              01/07/2026 18:27:49 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <reg51.h>
+   2          
+   3          #define lcd P3
+   4          
+   5          sbit rs   = P2^0;
+   6          sbit en   = P2^1;
+   7          sbit rd   = P2^2;
+   8          sbit wr   = P2^3;
+   9          sbit intr = P2^4;
+  10          sbit rw   = P2^7;
+  11          
+  12          unsigned char temp;
+  13          unsigned int i;
+  14          
+  15          /* Function declarations */
+  16          void delay(void);
+  17          void lcd_init(void);
+  18          void lcd_cmd(unsigned char);
+  19          void lcd_data(unsigned char);
+  20          void lcd_string(unsigned char *);
+  21          unsigned char adc_read(void);
+  22          
+  23          /* MAIN PROGRAM */
+  24          void main()
+  25          {
+  26   1          lcd_init();
+  27   1          lcd_string("Temp : ");
+  28   1      
+  29   1          while(1)
+  30   1          {
+  31   2              temp = adc_read();      // Direct °C value
+  32   2      
+  33   2              lcd_cmd(0x87);          // Cursor after "Temp : "
+  34   2      
+  35   2              lcd_data((temp / 100) + '0');
+  36   2              lcd_data(((temp / 10) % 10) + '0');
+  37   2              lcd_data((temp % 10) + '0');
+  38   2      
+  39   2              lcd_data(223);          // Degree symbol
+  40   2              lcd_data('C');
+  41   2      
+  42   2              delay();
+  43   2          }
+  44   1      }
+  45          
+  46          /* SIMPLE DELAY */
+  47          void delay(void)
+  48          {
+  49   1          for(i = 0; i < 10000; i++);
+  50   1      }
+  51          
+  52          /* LCD INITIALIZATION */
+  53          void lcd_init(void)
+  54          {
+C51 COMPILER V9.60.7.0   MAIN                                                              01/07/2026 18:27:49 PAGE 2   
+
+  55   1          lcd_cmd(0x38);   // 8-bit, 2 line
+  56   1          lcd_cmd(0x0E);   // Display ON, cursor ON
+  57   1          lcd_cmd(0x06);   // Auto increment
+  58   1          lcd_cmd(0x01);   // Clear display
+  59   1          lcd_cmd(0x80);   // Cursor at beginning
+  60   1      }
+  61          
+  62          /* LCD COMMAND */
+  63          void lcd_cmd(unsigned char cmd)
+  64          {
+  65   1          lcd = cmd;
+  66   1          rs = 0;
+  67   1          rw = 0;
+  68   1          en = 1;
+  69   1          delay();
+  70   1          en = 0;
+  71   1      }
+  72          
+  73          /* LCD DATA */
+  74          void lcd_data(unsigned char dat)
+  75          {
+  76   1          lcd = dat;
+  77   1          rs = 1;
+  78   1          rw = 0;
+  79   1          en = 1;
+  80   1          delay();
+  81   1          en = 0;
+  82   1      }
+  83          
+  84          /* DISPLAY STRING */
+  85          void lcd_string(unsigned char *str)
+  86          {
+  87   1          while(*str)
+  88   1              lcd_data(*str++);
+  89   1      }
+  90          
+  91          /* ADC0804 READ */
+  92          unsigned char adc_read(void)
+  93          {
+  94   1          rd = 1;
+  95   1          wr = 0;     // Start conversion
+  96   1          wr = 1;
+  97   1      
+  98   1          while(intr); // Wait till conversion complete
+  99   1      
+ 100   1          rd = 0;      // Enable output
+ 101   1          return P1;   // Read ADC data
+ 102   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    198    ----
+   CONSTANT SIZE    =      8    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      3       3
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

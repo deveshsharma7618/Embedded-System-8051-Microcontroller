@@ -1,0 +1,454 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              02/02/2026 09:30:32 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <reg51.h>
+   2          
+   3          // Pin definitions
+   4          sbit SDA = P2^0;  // Serial Data Line
+   5          sbit SCL = P2^1;  // Serial Clock Line
+   6          
+   7          // I2C delay for timing
+   8          void i2c_delay(void) {
+   9   1          unsigned char i;
+  10   1          for(i = 0; i < 10; i++);
+  11   1      }
+  12          
+  13          // I2C Start Condition
+  14          // SDA goes LOW while SCL is HIGH
+  15          void i2c_start(void) {
+  16   1          SDA = 1;
+  17   1          SCL = 1;
+  18   1          i2c_delay();
+  19   1          SDA = 0;  // START condition
+  20   1          i2c_delay();
+  21   1          SCL = 0;
+  22   1          i2c_delay();
+  23   1      }
+  24          
+  25          // I2C Stop Condition
+  26          // SDA goes HIGH while SCL is HIGH
+  27          void i2c_stop(void) {
+  28   1          SCL = 0;
+  29   1          SDA = 0;
+  30   1          i2c_delay();
+  31   1          SCL = 1;
+  32   1          i2c_delay();
+  33   1          SDA = 1;  // STOP condition
+  34   1          i2c_delay();
+  35   1      }
+  36          
+  37          // I2C Acknowledge
+  38          void i2c_ack(void) {
+  39   1          SCL = 0;
+  40   1          SDA = 0;  // Pull SDA low
+  41   1          i2c_delay();
+  42   1          SCL = 1;
+  43   1          i2c_delay();
+  44   1          SCL = 0;
+  45   1          i2c_delay();
+  46   1          SDA = 1;
+  47   1      }
+  48          
+  49          // I2C No Acknowledge
+  50          void i2c_nack(void) {
+  51   1          SCL = 0;
+  52   1          SDA = 1;  // Leave SDA high
+  53   1          i2c_delay();
+  54   1          SCL = 1;
+C51 COMPILER V9.60.7.0   MAIN                                                              02/02/2026 09:30:32 PAGE 2   
+
+  55   1          i2c_delay();
+  56   1          SCL = 0;
+  57   1          i2c_delay();
+  58   1      }
+  59          
+  60          // Send a byte over I2C
+  61          unsigned char i2c_send_byte(unsigned char byte) {
+  62   1          unsigned char i, ack;
+  63   1          
+  64   1          for(i = 0; i < 8; i++) {
+  65   2              SCL = 0;
+  66   2              i2c_delay();
+  67   2              
+  68   2              if(byte & 0x80)
+  69   2                  SDA = 1;  // Send bit 1
+  70   2              else
+  71   2                  SDA = 0;  // Send bit 0
+  72   2              
+  73   2              i2c_delay();
+  74   2              SCL = 1;  // Clock pulse
+  75   2              i2c_delay();
+  76   2              byte <<= 1;
+  77   2          }
+  78   1          
+  79   1          // Get ACK bit
+  80   1          SCL = 0;
+  81   1          SDA = 1;  // Release SDA
+  82   1          i2c_delay();
+  83   1          SCL = 1;
+  84   1          i2c_delay();
+  85   1          
+  86   1          if(SDA == 0)
+  87   1              ack = 1;  // ACK received
+  88   1          else
+  89   1              ack = 0;  // NACK received
+  90   1          
+  91   1          SCL = 0;
+  92   1          i2c_delay();
+  93   1          
+  94   1          return ack;
+  95   1      }
+  96          
+  97          // Receive a byte over I2C
+  98          unsigned char i2c_receive_byte(unsigned char ack_flag) {
+  99   1          unsigned char i, byte = 0x00;
+ 100   1          
+ 101   1          SDA = 1;  // Release SDA
+ 102   1          
+ 103   1          for(i = 0; i < 8; i++) {
+ 104   2              SCL = 0;
+ 105   2              i2c_delay();
+ 106   2              SCL = 1;
+ 107   2              i2c_delay();
+ 108   2              
+ 109   2              byte <<= 1;
+ 110   2              byte |= SDA;
+ 111   2              
+ 112   2              i2c_delay();
+ 113   2          }
+ 114   1          
+ 115   1          SCL = 0;
+ 116   1          i2c_delay();
+C51 COMPILER V9.60.7.0   MAIN                                                              02/02/2026 09:30:32 PAGE 3   
+
+ 117   1          
+ 118   1          if(ack_flag)
+ 119   1              i2c_ack();
+ 120   1          else
+ 121   1              i2c_nack();
+ 122   1          
+ 123   1          return byte;
+ 124   1      }
+ 125          
+ 126          // OLED12864I2C I2C Address (typically 0x78 or 0x7A)
+ 127          #define OLED_ADDR 0x78
+ 128          
+ 129          // OLED command codes
+ 130          #define OLED_CMD_SET_CONTRAST 0x81
+ 131          #define OLED_CMD_ENTIRE_DISPLAY_ON 0xA4
+ 132          #define OLED_CMD_NORMAL_DISPLAY 0xA6
+ 133          #define OLED_CMD_DISPLAY_OFF 0xAE
+ 134          #define OLED_CMD_DISPLAY_ON 0xAF
+ 135          #define OLED_CMD_SET_PAGE 0xB0
+ 136          #define OLED_CMD_LOWER_COLUMN 0x00
+ 137          #define OLED_CMD_UPPER_COLUMN 0x10
+ 138          #define OLED_CMD_START_LINE 0x40
+ 139          
+ 140          // Write command to OLED
+ 141          void oled_write_command(unsigned char cmd) {
+ 142   1          i2c_start();
+ 143   1          i2c_send_byte(OLED_ADDR);  // OLED address + write bit
+ 144   1          i2c_send_byte(0x00);        // Command byte (0x00 = command, 0x40 = data)
+ 145   1          i2c_send_byte(cmd);         // Command
+ 146   1          i2c_stop();
+ 147   1      }
+ 148          
+ 149          // Write data to OLED
+ 150          void oled_write_data(unsigned char val) {
+ 151   1          i2c_start();
+ 152   1          i2c_send_byte(OLED_ADDR);   // OLED address + write bit
+ 153   1          i2c_send_byte(0x40);        // Data byte (0x40 = data)
+ 154   1          i2c_send_byte(val);        // Data
+ 155   1          i2c_stop();
+ 156   1      }
+ 157          
+ 158          // Initialize OLED display
+ 159          void oled_init(void) {
+ 160   1          // Turn off display
+ 161   1          oled_write_command(OLED_CMD_DISPLAY_OFF);
+ 162   1          
+ 163   1          // Set display clock divide ratio
+ 164   1          oled_write_command(0xD5);
+ 165   1          oled_write_command(0x80);
+ 166   1          
+ 167   1          // Set multiplex ratio
+ 168   1          oled_write_command(0xA8);
+ 169   1          oled_write_command(0x3F);
+ 170   1          
+ 171   1          // Set display offset
+ 172   1          oled_write_command(0xD3);
+ 173   1          oled_write_command(0x00);
+ 174   1          
+ 175   1          // Set start line
+ 176   1          oled_write_command(OLED_CMD_START_LINE);
+ 177   1          
+ 178   1          // Set charge pump
+C51 COMPILER V9.60.7.0   MAIN                                                              02/02/2026 09:30:32 PAGE 4   
+
+ 179   1          oled_write_command(0x8D);
+ 180   1          oled_write_command(0x14);
+ 181   1          
+ 182   1          // Set memory addressing mode
+ 183   1          oled_write_command(0x20);
+ 184   1          oled_write_command(0x02);
+ 185   1          
+ 186   1          // Set segment re-map
+ 187   1          oled_write_command(0xA1);
+ 188   1          
+ 189   1          // Set COM output scan direction
+ 190   1          oled_write_command(0xC8);
+ 191   1          
+ 192   1          // Set COM pins hardware configuration
+ 193   1          oled_write_command(0xDA);
+ 194   1          oled_write_command(0x12);
+ 195   1          
+ 196   1          // Set contrast
+ 197   1          oled_write_command(OLED_CMD_SET_CONTRAST);
+ 198   1          oled_write_command(0x7F);
+ 199   1          
+ 200   1          // Set pre-charge period
+ 201   1          oled_write_command(0xD9);
+ 202   1          oled_write_command(0xF1);
+ 203   1          
+ 204   1          // Set VCOMH deselect level
+ 205   1          oled_write_command(0xDB);
+ 206   1          oled_write_command(0x40);
+ 207   1          
+ 208   1          // Set entire display on
+ 209   1          oled_write_command(OLED_CMD_ENTIRE_DISPLAY_ON);
+ 210   1          
+ 211   1          // Set normal display
+ 212   1          oled_write_command(OLED_CMD_NORMAL_DISPLAY);
+ 213   1          
+ 214   1          // Turn on display
+ 215   1          oled_write_command(OLED_CMD_DISPLAY_ON);
+ 216   1      }
+ 217          
+ 218          // Clear OLED display
+ 219          void oled_clear(void) {
+ 220   1          unsigned char page, col;
+ 221   1          
+ 222   1          for(page = 0; page < 8; page++) {
+ 223   2              oled_write_command(0xB0 + page);  // Set page address
+ 224   2              oled_write_command(0x00);          // Set lower column address
+ 225   2              oled_write_command(0x10);          // Set upper column address
+ 226   2              
+ 227   2              for(col = 0; col < 128; col++) {
+ 228   3                  oled_write_data(0x00);  // Write blank data
+ 229   3              }
+ 230   2          }
+ 231   1      }
+ 232          
+ 233          // Display a simple pattern (for testing)
+ 234          void oled_test_pattern(void) {
+ 235   1          unsigned char page, col;
+ 236   1          
+ 237   1          for(page = 0; page < 8; page++) {
+ 238   2              oled_write_command(0xB0 + page);  // Set page address
+ 239   2              oled_write_command(0x00);          // Set lower column address
+ 240   2              oled_write_command(0x10);          // Set upper column address
+C51 COMPILER V9.60.7.0   MAIN                                                              02/02/2026 09:30:32 PAGE 5   
+
+ 241   2              
+ 242   2              for(col = 0; col < 128; col++) {
+ 243   3                  if(page % 2 == 0)
+ 244   3                      oled_write_data(0xFF);  // Alternating pattern
+ 245   3                  else
+ 246   3                      oled_write_data(0x00);
+ 247   3              }
+ 248   2          }
+ 249   1      }
+ 250          
+ 251          // Delay function (milliseconds)
+ 252          void delay_ms(unsigned int ms) {
+ 253   1          unsigned int i, j;
+ 254   1          for(i = 0; i < ms; i++)
+ 255   1              for(j = 0; j < 121; j++);  // Adjust for your clock frequency
+ 256   1      }
+ 257          
+ 258          // 5x8 ASCII font data (simplified, character 0x20 to 0x7E)
+ 259          const unsigned char code font_5x8[95][5] = {
+ 260              {0x00, 0x00, 0x00, 0x00, 0x00}, // Space
+ 261              {0x00, 0x00, 0x5F, 0x00, 0x00}, // !
+ 262              {0x00, 0x03, 0x00, 0x03, 0x00}, // "
+ 263              {0x14, 0x3E, 0x14, 0x3E, 0x14}, // #
+ 264              {0x24, 0x2A, 0x7F, 0x2A, 0x12}, // $
+ 265              {0x63, 0x13, 0x08, 0x64, 0x63}, // %
+ 266              {0x36, 0x49, 0x55, 0x22, 0x50}, // &
+ 267              {0x00, 0x05, 0x03, 0x00, 0x00}, // '
+ 268              {0x00, 0x1C, 0x22, 0x41, 0x00}, // (
+ 269              {0x00, 0x41, 0x22, 0x1C, 0x00}, // )
+ 270              {0x2A, 0x1C, 0x7F, 0x1C, 0x2A}, // *
+ 271              {0x08, 0x08, 0x3E, 0x08, 0x08}, // +
+ 272              {0x00, 0x50, 0x30, 0x00, 0x00}, // ,
+ 273              {0x08, 0x08, 0x08, 0x08, 0x08}, // -
+ 274              {0x00, 0x60, 0x60, 0x00, 0x00}, // .
+ 275              {0x20, 0x10, 0x08, 0x04, 0x02}, // /
+ 276              {0x3E, 0x51, 0x49, 0x45, 0x3E}, // 0
+ 277              {0x00, 0x42, 0x7F, 0x40, 0x00}, // 1
+ 278              {0x42, 0x61, 0x51, 0x49, 0x46}, // 2
+ 279              {0x21, 0x41, 0x45, 0x4B, 0x31}, // 3
+ 280              {0x18, 0x14, 0x12, 0x7F, 0x10}, // 4
+ 281              {0x27, 0x45, 0x45, 0x45, 0x39}, // 5
+ 282              {0x3C, 0x4A, 0x49, 0x49, 0x30}, // 6
+ 283              {0x01, 0x71, 0x09, 0x05, 0x03}, // 7
+ 284              {0x36, 0x49, 0x49, 0x49, 0x36}, // 8
+ 285              {0x06, 0x49, 0x49, 0x29, 0x1E}, // 9
+ 286              {0x00, 0x36, 0x36, 0x00, 0x00}, // :
+ 287              {0x00, 0x56, 0x36, 0x00, 0x00}, // ;
+ 288              {0x08, 0x14, 0x22, 0x41, 0x00}, // <
+ 289              {0x14, 0x14, 0x14, 0x14, 0x14}, // =
+ 290              {0x00, 0x41, 0x22, 0x14, 0x08}, // >
+ 291              {0x02, 0x01, 0x51, 0x09, 0x06}, // ?
+ 292              {0x32, 0x49, 0x79, 0x41, 0x3E}, // @
+ 293              {0x7E, 0x11, 0x11, 0x11, 0x7E}, // A
+ 294              {0x7F, 0x49, 0x49, 0x49, 0x36}, // B
+ 295              {0x3E, 0x41, 0x41, 0x41, 0x22}, // C
+ 296              {0x7F, 0x41, 0x41, 0x22, 0x1C}, // D
+ 297              {0x7F, 0x49, 0x49, 0x49, 0x41}, // E
+ 298              {0x7F, 0x09, 0x09, 0x09, 0x01}, // F
+ 299              {0x3E, 0x41, 0x49, 0x49, 0x7A}, // G
+ 300              {0x7F, 0x08, 0x08, 0x08, 0x7F}, // H
+ 301              {0x00, 0x41, 0x7F, 0x41, 0x00}, // I
+ 302              {0x20, 0x40, 0x41, 0x3F, 0x01}, // J
+C51 COMPILER V9.60.7.0   MAIN                                                              02/02/2026 09:30:32 PAGE 6   
+
+ 303              {0x7F, 0x08, 0x14, 0x22, 0x41}, // K
+ 304              {0x7F, 0x40, 0x40, 0x40, 0x40}, // L
+ 305              {0x7F, 0x02, 0x0C, 0x02, 0x7F}, // M
+ 306              {0x7F, 0x04, 0x08, 0x10, 0x7F}, // N
+ 307              {0x3E, 0x41, 0x41, 0x41, 0x3E}, // O
+ 308              {0x7F, 0x09, 0x09, 0x09, 0x06}, // P
+ 309              {0x3E, 0x41, 0x51, 0x21, 0x5E}, // Q
+ 310              {0x7F, 0x09, 0x19, 0x29, 0x46}, // R
+ 311              {0x46, 0x49, 0x49, 0x49, 0x31}, // S
+ 312              {0x01, 0x01, 0x7F, 0x01, 0x01}, // T
+ 313              {0x3F, 0x40, 0x40, 0x40, 0x3F}, // U
+ 314              {0x1F, 0x20, 0x40, 0x20, 0x1F}, // V
+ 315              {0x3F, 0x40, 0x38, 0x40, 0x3F}, // W
+ 316              {0x63, 0x14, 0x08, 0x14, 0x63}, // X
+ 317              {0x07, 0x08, 0x70, 0x08, 0x07}, // Y
+ 318              {0x61, 0x51, 0x49, 0x45, 0x43}, // Z
+ 319              {0x00, 0x7F, 0x41, 0x41, 0x00}, // [
+ 320              {0x02, 0x04, 0x08, 0x10, 0x20}, // Backslash
+ 321              {0x00, 0x41, 0x41, 0x7F, 0x00}, // ]
+ 322              {0x04, 0x02, 0x01, 0x02, 0x04}, // ^
+ 323              {0x40, 0x40, 0x40, 0x40, 0x40}, // _
+ 324              {0x00, 0x01, 0x02, 0x04, 0x00}, // `
+ 325              {0x20, 0x54, 0x54, 0x54, 0x78}, // a
+ 326              {0x7F, 0x48, 0x44, 0x44, 0x38}, // b
+ 327              {0x38, 0x44, 0x44, 0x44, 0x20}, // c
+ 328              {0x38, 0x44, 0x44, 0x48, 0x7F}, // d
+ 329              {0x38, 0x54, 0x54, 0x54, 0x18}, // e
+ 330              {0x08, 0x7E, 0x09, 0x01, 0x02}, // f
+ 331              {0x0C, 0x52, 0x52, 0x52, 0x3E}, // g
+ 332              {0x7F, 0x08, 0x04, 0x04, 0x78}, // h
+ 333              {0x00, 0x44, 0x7D, 0x40, 0x00}, // i
+ 334              {0x20, 0x40, 0x44, 0x3D, 0x00}, // j
+ 335              {0x7F, 0x10, 0x28, 0x44, 0x00}, // k
+ 336              {0x00, 0x41, 0x7F, 0x40, 0x00}, // l
+ 337              {0x7C, 0x04, 0x18, 0x04, 0x7C}, // m
+ 338              {0x7C, 0x08, 0x04, 0x04, 0x78}, // n
+ 339              {0x38, 0x44, 0x44, 0x44, 0x38}, // o
+ 340              {0x7C, 0x14, 0x14, 0x14, 0x08}, // p
+ 341              {0x08, 0x14, 0x14, 0x18, 0x7C}, // q
+ 342              {0x7C, 0x08, 0x04, 0x04, 0x08}, // r
+ 343              {0x48, 0x54, 0x54, 0x54, 0x20}, // s
+ 344              {0x04, 0x3F, 0x44, 0x40, 0x20}, // t
+ 345              {0x3C, 0x40, 0x40, 0x20, 0x7C}, // u
+ 346              {0x1C, 0x20, 0x40, 0x20, 0x1C}, // v
+ 347              {0x3C, 0x40, 0x30, 0x40, 0x3C}, // w
+ 348              {0x44, 0x28, 0x10, 0x28, 0x44}, // x
+ 349              {0x0C, 0x50, 0x50, 0x50, 0x3C}, // y
+ 350              {0x44, 0x64, 0x54, 0x4C, 0x44}, // z
+ 351              {0x00, 0x08, 0x36, 0x41, 0x00}, // {
+ 352              {0x00, 0x00, 0x7F, 0x00, 0x00}, // |
+ 353              {0x00, 0x41, 0x36, 0x08, 0x00}, // }
+ 354              {0x10, 0x08, 0x08, 0x10, 0x08}, // ~
+ 355          };
+ 356          
+ 357          // Set cursor to specific page and column
+ 358          void oled_set_cursor(unsigned char page, unsigned char col) {
+ 359   1          oled_write_command(0xB0 + (page & 0x07));  // Set page (0-7)
+ 360   1          oled_write_command(0x00 + (col & 0x0F));   // Set lower column
+ 361   1          oled_write_command(0x10 + ((col >> 4) & 0x0F));  // Set upper column
+ 362   1      }
+ 363          
+ 364          // Write a single character at current cursor position
+C51 COMPILER V9.60.7.0   MAIN                                                              02/02/2026 09:30:32 PAGE 7   
+
+ 365          void oled_write_char(unsigned char c) {
+ 366   1          unsigned char i;
+ 367   1          
+ 368   1          if(c < 0x20 || c > 0x7E)
+ 369   1              c = 0x20;  // Default to space for invalid characters
+ 370   1          
+ 371   1          c -= 0x20;  // Offset for font array
+ 372   1          
+ 373   1          for(i = 0; i < 5; i++) {
+ 374   2              oled_write_data(font_5x8[c][i]);
+ 375   2          }
+ 376   1          oled_write_data(0x00);  // Space between characters
+ 377   1      }
+ 378          
+ 379          // Write string at specific page and column
+ 380          void oled_write_string(unsigned char page, unsigned char col, const char* str) {
+ 381   1          oled_set_cursor(page, col);
+ 382   1          
+ 383   1          while(*str) {
+ 384   2              oled_write_char(*str++);
+ 385   2          }
+ 386   1      }
+ 387          
+ 388          // Main program
+ 389          void main(void) {
+ 390   1          // Initialize P2 as open-drain for I2C
+ 391   1          P2 = 0xFF;  // Set all P2 pins high initially
+ 392   1          
+ 393   1          // Initialize OLED
+ 394   1          delay_ms(100);  // Wait for OLED to be ready
+ 395   1          oled_init();
+ 396   1          
+ 397   1          delay_ms(100);
+ 398   1          
+ 399   1          // Clear display
+ 400   1          oled_clear();
+ 401   1          delay_ms(100);
+ 402   1          
+ 403   1          // Display text at different positions
+ 404   1          oled_write_string(0, 0, "Hello, Devesh!");
+ 405   1          oled_write_string(1, 0, "Welcome to I2C");
+ 406   1          oled_write_string(2, 0, "How are you?");
+ 407   1          oled_write_string(3, 0, "I am fine.");
+ 408   1          oled_write_string(4, 0, "What are you doing?");
+ 409   1          oled_write_string(5, 0, "I am coding code!");
+ 410   1          oled_write_string(6, 0, "Where are you?");
+ 411   1          oled_write_string(7, 0, "At home.");
+ 412   1          // Main loop
+ 413   1          while(1) {
+ 414   2              delay_ms(1000);
+ 415   2          }
+ 416   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    686    ----
+   CONSTANT SIZE    =    591    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       3
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+C51 COMPILER V9.60.7.0   MAIN                                                              02/02/2026 09:30:32 PAGE 8   
+
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

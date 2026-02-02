@@ -1,0 +1,4 @@
+".\Objects\STARTUP.obj",
+".\Objects\main.obj" 
+TO ".\Objects\i2c_protocol" 
+PRINT(".\Listings\i2c_protocol.m51")

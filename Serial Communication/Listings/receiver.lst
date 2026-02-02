@@ -1,0 +1,50 @@
+C51 COMPILER V9.60.7.0   RECEIVER                                                          01/08/2026 10:58:33 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE RECEIVER
+OBJECT MODULE PLACED IN .\Objects\receiver.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE receiver.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\
+                    -receiver.lst) TABS(2) OBJECT(.\Objects\receiver.obj)
+
+line level    source
+
+   1          #include <reg51.h>
+   2          
+   3          void serial_init()
+   4          {
+   5   1          TMOD = 0x20;    // Timer1, mode 2
+   6   1          TH1 = 0xFD;     // 9600 baud rate
+   7   1          SCON = 0x50;    // Mode 1, REN enabled
+   8   1          TR1 = 1;        // Start Timer1
+   9   1      }
+  10          
+  11          void receive_char()
+  12          {
+  13   1          while(RI == 0);
+  14   1          P1 = SBUF;
+  15   1          RI = 0;
+  16   1      }
+  17          
+  18          void main()
+  19          {
+  20   1          serial_init();
+  21   1      
+  22   1          while(1)
+  23   1          {
+  24   2              receive_char();
+  25   2          }
+  26   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     29    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
