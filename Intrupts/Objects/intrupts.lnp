@@ -1,0 +1,4 @@
+".\Objects\STARTUP.obj",
+".\Objects\intrupts.obj" 
+TO ".\Objects\intrupts" 
+PRINT(".\Listings\intrupts.m51")

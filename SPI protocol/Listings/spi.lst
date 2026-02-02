@@ -1,0 +1,246 @@
+C51 COMPILER V9.60.7.0   SPI                                                               02/02/2026 11:15:53 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE SPI
+OBJECT MODULE PLACED IN .\Objects\spi.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE spi.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\spi.l
+                    -st) TABS(2) OBJECT(.\Objects\spi.obj)
+
+line level    source
+
+   1          #include <reg51.h>
+   2          
+   3          // Port Definitions for ADC0804
+   4          sbit ADC_RD = P3 ^ 7;   // Read signal (RD)
+   5          sbit ADC_WR = P3 ^ 6;   // Write signal (WR)
+   6          sbit ADC_INTR = P3 ^ 2; // Interrupt signal (INTR - INT0)
+   7          sbit ADC_CS = P3 ^ 5;   // Chip Select
+   8          
+   9          #define ADC_DATA P1 // ADC data lines connected to Port 1
+  10          
+  11          // Function Prototypes
+  12          void ADC_init(void);
+  13          void delay_us(unsigned int us);
+  14          void delay_ms(unsigned int ms);
+  15          unsigned char ADC_read(void);
+  16          float convert_to_temperature(unsigned char adc_value);
+  17          void UART_init(void);
+  18          void UART_send_char(unsigned char ch);
+  19          void UART_send_string(unsigned char *str);
+  20          
+  21          // Delay function (microseconds)
+  22          void delay_us(unsigned int us)
+  23          {
+  24   1          unsigned int i;
+  25   1          for (i = 0; i < us; i++)
+  26   1              ;
+  27   1      }
+  28          
+  29          // Delay function (milliseconds)
+  30          void delay_ms(unsigned int ms)
+  31          {
+  32   1          unsigned int i, j;
+  33   1          for (i = 0; i < ms; i++)
+  34   1              for (j = 0; j < 123; j++)
+  35   1                  ;
+  36   1      }
+  37          
+  38          // Initialize ADC0804
+  39          void ADC_init(void)
+  40          {
+  41   1          P1 = 0xFF; // Configure Port 1 as input
+  42   1          ADC_RD = 1;
+  43   1          ADC_WR = 1;
+  44   1          ADC_CS = 0; // Enable chip select
+  45   1          delay_ms(10);
+  46   1      }
+  47          
+  48          // Read ADC value
+  49          unsigned char ADC_read(void)
+  50          {
+  51   1          unsigned char adc_value;
+  52   1          unsigned int timeout = 0;
+  53   1      
+  54   1          // Start conversion
+C51 COMPILER V9.60.7.0   SPI                                                               02/02/2026 11:15:53 PAGE 2   
+
+  55   1          ADC_WR = 0; // Write pulse to start conversion
+  56   1          delay_us(10);
+  57   1          ADC_WR = 1;
+  58   1          delay_us(10); // Wait for WR pulse to settle
+  59   1      
+  60   1          // Wait for conversion to complete (INTR goes LOW when conversion is done)
+  61   1          // ADC0804 conversion time is typically 100us
+  62   1          while (ADC_INTR == 1 && timeout < 1000)
+  63   1          {
+  64   2              delay_us(1);
+  65   2              timeout++;
+  66   2          }
+  67   1      
+  68   1          // Read the result
+  69   1          ADC_RD = 0; // Read pulse
+  70   1          delay_us(10);
+  71   1          adc_value = ADC_DATA; // Read data from ADC
+  72   1          ADC_RD = 1;
+  73   1      
+  74   1          return adc_value;
+  75   1      }
+  76          
+  77          // Convert ADC value to temperature (for LM35 or similar)
+  78          // LM35 output: 10mV per °C
+  79          // ADC0804: Vref = 5V, 8-bit resolution
+  80          // Formula: Temperature = (ADC_value * 5 * 100) / 256
+  81          float convert_to_temperature(unsigned char adc_value)
+  82          {
+  83   1          float voltage, temperature;
+  84   1      
+  85   1          // Convert ADC value to voltage (0-5V for 0-255)
+  86   1          voltage = (adc_value * 5.0) / 255.0;
+  87   1      
+  88   1          // For LM35 sensor: 10mV per °C
+  89   1          temperature = voltage * 100.0;
+  90   1      
+  91   1          return temperature;
+  92   1      }
+  93          
+  94          // UART Initialization (for debugging/displaying values)
+  95          void UART_init(void)
+  96          {
+  97   1          TMOD = 0x20; // Timer 1: Mode 2 (8-bit auto-reload)
+  98   1          TH1 = 0xFD;  // Load timer value for 9600 baud at 11.0592 MHz
+  99   1          SCON = 0x50; // Mode 1: 8-bit UART, receiver enabled
+ 100   1          TR1 = 1;     // Start Timer 1
+ 101   1          TI = 1;      // Set TI flag for first transmission
+ 102   1          // ES = 1;     // Serial interrupt disabled (not using interrupts)
+ 103   1          // EA = 1;     // Global interrupt disabled (not using interrupts)
+ 104   1      }
+ 105          
+ 106          // Send character via UART
+ 107          void UART_send_char(unsigned char ch)
+ 108          {
+ 109   1          SBUF = ch;
+ 110   1          while (!TI)
+ 111   1              ;
+ 112   1          TI = 0;
+ 113   1      }
+ 114          
+ 115          // Send string via UART
+ 116          void UART_send_string(unsigned char *str)
+C51 COMPILER V9.60.7.0   SPI                                                               02/02/2026 11:15:53 PAGE 3   
+
+ 117          {
+ 118   1          while (*str)
+ 119   1          {
+ 120   2              UART_send_char(*str++);
+ 121   2          }
+ 122   1      }
+ 123          
+ 124          // Convert integer to string
+ 125          void int_to_string(unsigned int num, unsigned char *str)
+ 126          {
+ 127   1          unsigned char i = 0, temp = num;
+ 128   1      
+ 129   1          if (num == 0)
+ 130   1          {
+ 131   2              str[0] = '0';
+ 132   2              str[1] = '\0';
+ 133   2              return;
+ 134   2          }
+ 135   1      
+ 136   1          while (temp > 0)
+ 137   1          {
+ 138   2              i++;
+ 139   2              temp /= 10;
+ 140   2          }
+ 141   1      
+ 142   1          temp = i;
+ 143   1          while (num > 0)
+ 144   1          {
+ 145   2              str[--i] = (num % 10) + '0';
+ 146   2              num /= 10;
+ 147   2          }
+ 148   1          str[temp] = '\0';
+ 149   1      }
+ 150          
+ 151          #include <string.h>
+ 152          
+ 153          void serial_init()
+ 154          {
+ 155   1          TMOD = 0x20; // Timer1, mode 2 (8-bit auto-reload)
+ 156   1          TH1 = 0xFD;  // 9600 baud rate at 11.0592 MHz
+ 157   1          SCON = 0x50; // Mode 1 (8-bit UART), REN enabled
+ 158   1          TR1 = 1;     // Start Timer1
+ 159   1      }
+ 160          
+ 161          void send_char(char ch)
+ 162          {
+ 163   1          SBUF = ch; // Load character to buffer
+ 164   1          while (TI == 0)
+ 165   1              ;   // Wait until transmission complete
+ 166   1          TI = 0; // Clear transmit interrupt flag
+ 167   1      }
+ 168          
+ 169          void send_string(char *str)
+ 170          {
+ 171   1          int i;
+ 172   1          for (i = 0; str[i] != '\0'; i++)
+ 173   1          {
+ 174   2              send_char(str[i]);
+ 175   2          }
+ 176   1      }
+ 177          
+ 178          
+C51 COMPILER V9.60.7.0   SPI                                                               02/02/2026 11:15:53 PAGE 4   
+
+ 179          // Main function
+ 180          void main(void)
+ 181          {
+ 182   1          unsigned char adc_value;
+ 183   1          float temperature;
+ 184   1          unsigned char temp_str[10];
+ 185   1      
+ 186   1          UART_init();
+ 187   1          ADC_init();
+ 188   1      
+ 189   1          serial_init();
+ 190   1          send_string("Hello from 8051!\r\n");
+ 191   1      
+ 192   1          UART_send_string("ADC0804 Temperature Reader\r\n");
+ 193   1          UART_send_string("Starting...\r\n");
+ 194   1      
+ 195   1          while (1)
+ 196   1          {
+ 197   2              // Read ADC value
+ 198   2              adc_value = ADC_read();
+ 199   2      
+ 200   2              // Convert to temperature
+ 201   2              temperature = convert_to_temperature(adc_value);
+ 202   2      
+ 203   2              // Display results
+ 204   2              UART_send_string("ADC Value: ");
+ 205   2              int_to_string(adc_value, temp_str);
+ 206   2              UART_send_string((unsigned char *)temp_str);
+ 207   2              UART_send_string(" | Temp: ");
+ 208   2      
+ 209   2              // Send temperature (integer part)
+ 210   2              int_to_string((unsigned int)temperature, temp_str);
+ 211   2              UART_send_string((unsigned char *)temp_str);
+ 212   2              UART_send_string(" C\r\n");
+ 213   2      
+ 214   2              delay_ms(1000); // 1 second delay between readings
+ 215   2          }
+ 216   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    552    ----
+   CONSTANT SIZE    =     89    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      32
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

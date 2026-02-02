@@ -1,0 +1,4 @@
+".\Objects\STARTUP.obj",
+".\Objects\spi.obj" 
+TO ".\Objects\spi" 
+PRINT(".\Listings\spi.m51")

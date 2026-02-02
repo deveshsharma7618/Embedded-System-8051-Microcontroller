@@ -1,0 +1,170 @@
+C51 COMPILER V9.60.7.0   INTRUPTS                                                          02/02/2026 12:02:18 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE INTRUPTS
+OBJECT MODULE PLACED IN .\Objects\intrupts.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE intrupts.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\
+                    -intrupts.lst) TABS(2) OBJECT(.\Objects\intrupts.obj)
+
+line level    source
+
+   1          #include <reg51.h>
+   2          #include <string.h>
+   3          #define lcd_width 20
+   4          #define lcd_height 4
+   5          sbit LED = P1 ^ 0; // Define LED at P1.0
+   6          int cursor_pos = 0;
+   7          
+   8          unsigned int timer_count = 0; // Counter for 1 second
+   9          
+  10          void Timer0_Init(void);
+  11          void lcd_send_byte(unsigned char byte_val);
+  12          void lcd_command(unsigned char cmd);
+  13          void lcd_goto(unsigned char row, unsigned char col);
+  14          void send_lcd(unsigned char *s);
+  15          void clear_screen();
+  16          
+  17          void delay_ms(unsigned int ms);
+  18          
+  19          // Timer 0 ISR - Toggles P1^0 every 1 second
+  20          void Timer0_ISR(void) interrupt 1
+  21          {
+  22   1          TH0 = 0xFC; // Reload for ~1ms delay @ 11.0592MHz
+  23   1          TL0 = 0x66;
+  24   1      
+  25   1          timer_count++;
+  26   1          if (timer_count >= 1000) // 1000ms = 1 second
+  27   1          {
+  28   2              timer_count = 0;
+  29   2              LED = ~LED; // Toggle LED every 1 second
+  30   2          }
+  31   1      }
+  32          
+  33          void main(void)
+  34          {
+  35   1          delay_ms(500); // Wait for LCD to power up
+  36   1      
+  37   1          // Initialize UART for 9600 baud at 11.0592 MHz crystal
+  38   1          SCON = 0x50;      // 8-bit UART, enable receiver
+  39   1          TMOD = 0x20;      // Timer 1 in mode 2 (auto-reload)
+  40   1          TH1 = TL1 = 0xFD; // 9600 baud
+  41   1          TR1 = 1;          // Start timer 1
+  42   1          // Initialize LCD
+  43   1          clear_screen();
+  44   1          Timer0_Init();
+  45   1      
+  46   1          // Display on serial LCD
+  47   1      
+  48   1          while (1)
+  49   1          {
+  50   2              lcd_goto(0, 0);
+  51   2              send_lcd("Intrupts in C");
+  52   2      
+  53   2              lcd_goto(1, 0);
+  54   2              send_lcd("Using 8051 Timer0");
+C51 COMPILER V9.60.7.0   INTRUPTS                                                          02/02/2026 12:02:18 PAGE 2   
+
+  55   2      
+  56   2              lcd_goto(2, 0);
+  57   2              send_lcd("Devesh Sharma");
+  58   2      
+  59   2              delay_ms(4000);
+  60   2              clear_screen();
+  61   2      
+  62   2          }
+  63   1      }
+  64          
+  65          void Timer0_Init(void)
+  66          {
+  67   1          TMOD &= 0xF0; // Clear Timer 0 bits
+  68   1          TMOD |= 0x01; // Timer 0, Mode 1 (16-bit timer)
+  69   1          TH0 = 0xFC;   // Load initial value for ~1ms delay @ 11.0592MHz
+  70   1          TL0 = 0x66;
+  71   1          EA = 1;  // Enable global interrupts
+  72   1          ET0 = 1; // Enable Timer 0 interrupt
+  73   1          TR0 = 1; // Start Timer 0
+  74   1      }
+  75          
+  76          void lcd_send_byte(unsigned char byte_val)
+  77          {
+  78   1          SBUF = byte_val;
+  79   1          while (TI == 0)
+  80   1              ;
+  81   1          TI = 0;
+  82   1          delay_ms(1);
+  83   1      }
+  84          
+  85          void lcd_command(unsigned char cmd)
+  86          {
+  87   1          lcd_send_byte(0xFE); // Command prefix
+  88   1          lcd_send_byte(cmd);
+  89   1          delay_ms(2);
+  90   1      }
+  91          
+  92          void lcd_goto(unsigned char row, unsigned char col)
+  93          {
+  94   1          unsigned char pos;
+  95   1          if (row == 0)
+  96   1              pos = 0x00 + col;
+  97   1          else if (row == 1)
+  98   1              pos = 0x40 + col;
+  99   1          else if (row == 2)
+ 100   1              pos = 0x14 + col;
+ 101   1          else
+ 102   1              pos = 0x54 + col;
+ 103   1      
+ 104   1          lcd_command(0x80 | pos);
+ 105   1          cursor_pos = row * lcd_width + col;
+ 106   1      }
+ 107          
+ 108          // Send string to LCD
+ 109          void send_lcd(unsigned char *s)
+ 110          {
+ 111   1          int i = 0;
+ 112   1          int j = 1;
+ 113   1          while (*s != '\0')
+ 114   1          {
+ 115   2              lcd_send_byte(*s);
+ 116   2              i++;
+C51 COMPILER V9.60.7.0   INTRUPTS                                                          02/02/2026 12:02:18 PAGE 3   
+
+ 117   2              s++;
+ 118   2              cursor_pos++;
+ 119   2              if (i >= lcd_width - 1)
+ 120   2              {
+ 121   3                  lcd_goto(j, 0);
+ 122   3                  j++;
+ 123   3                  i = 0;
+ 124   3              }
+ 125   2          }
+ 126   1      }
+ 127          
+ 128          // Clear entire LCD screen
+ 129          void clear_screen()
+ 130          {
+ 131   1          lcd_command(0x01); // Clear display command
+ 132   1          delay_ms(2);
+ 133   1          cursor_pos = 0;
+ 134   1      }
+ 135          // Delay function in milliseconds
+ 136          void delay_ms(unsigned int ms)
+ 137          {
+ 138   1          unsigned int i, j;
+ 139   1          for (i = 0; i < ms; i++)
+ 140   1              for (j = 0; j < 123; j++)
+ 141   1                  ; // Approx 1ms @ 11.0592MHz
+ 142   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    394    ----
+   CONSTANT SIZE    =     46    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4      11
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
